@@ -1,4 +1,0 @@
-1. fragment动态替换时，需要在xml布局文件中添加类似framelayout替代fragment标签。
-2. 在使用fragment时，onCreateView() 一定要返回非null，否则fragment会报错。
-3. 理解fragment生命周期。
-4. 例子来源网址：http://www.cnblogs.com/terryblog/archive/2012/02/17/2355753.html
