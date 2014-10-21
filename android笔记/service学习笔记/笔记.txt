@@ -1,0 +1,88 @@
+Service是一种应用程序组件，它运行在后台以提供某种服务，通常不具有可见的用户界面。其它的应用程序组件可以启动一个Service，即使在用户切换到另外一个应用程序后，这个Service还是一直会在后台运行。
+
+一个应用程序也可以绑定到一个Service然后使用进程间通信（IPC）方式与Service之间发生交互。例如一个Service可以处理网络事物，播放音乐，读写文件或者读写ContentProvider，所以这些都在后台运行。
+
+
+IntentService 为Service的一个子类，它会使用一个工作线程来处理所有的请求，每次处理一个请求。这在你无需实现并行处理多个请求时是最好的选择。你只需重载onHandleIntent()方法，这个方法接受每个请求，从而你可以在后台完成所需任务。也可以自己继承service实现并行处理。
+
+
+通常Service在后台运行，但有时某些Service是用户明确知道在运行，即使在系统资源不足时，也不该做为销毁的候选Service，这种Service可以设置成在前台运行，在前台运行的Service必须在状态条显示通知，除非Service停止或者转入后台，这种通知不可以被忽视。
+比如，如果一个音乐播放器使用Service来播放，这个Service应该被放在前台运行，因为用户很清楚的知道音乐在播放，而在状态条显示的通知理当显示当前播放的乐曲并且允许用户启动一个Activity来操作这个音乐播放器。
+要把一个Service放在前台运行，可以调用startForeground()。这个方法接受两个参数：一个整数来唯一标识一个通知，和显示在状态条上的通知对象。
+例如：
+要使一个Service推出前台运行，调用stopForeground(). 这个方法接受一个boolean参数，指明是否同时移除状态条上的通知。 这个方法并不会停止Service的运行。但如果你停止一个在前台运行的Service，那么会同时移除状态条的通知。
+
+服务作为组件，使用时需要必须在manifest里面声明。
+
+
+
+本地服务（Local）：
+优点： 该服务依附在主进程上，服务依附在主进程上而不是独立的进程，这样在一定程度上节约了资源，另外Local服务因为是在同一进程因此不需要IPC，也不需要AIDL。相应bindService会方便很多。
+
+缺点：主进程被Kill后，服务便会终止。如：天天动听音乐播放服务。
+
+远程服务（Remote）：
+优点：该服务是独立的进程，服务为独立的进程，对应进程名格式为所在包名加上你指定的android:process字符串。由于是独立的进程，因此在Activity所在进程被Kill的时候，该服务依然在运行，不受其他进程影响，有利于为多个进程提供服务具有较高的灵活性。	 
+缺点：该服务是独立的进程，会占用一定资源，并且使用AIDL进行IPC稍微麻烦一点。	 一些提供系统服务的Service，这种Service是常驻的。
+
+前台服务：
+会在通知一栏显示 ONGOING 的 Notification，	当服务被终止的时候，通知一栏的 Notification 也会消失，这样对于用户有一定的通知作用。常见的如音乐播放服务。
+
+后台服务：
+默认的服务即为后台服务，即不会在通知一栏显示 ONGOING 的 Notification。	当服务被终止的时候，用户是看不到效果。某些不需要运行或终止提示的服务，如天气更新等。
+
+startService 启动的服务	主要用于启动一个服务执行后台任务，不进行通信。停止服务使用stopService.
+
+bindService启动的服务,该方法启动的服务要进行通信。停止服务使用unbindService。
+
+startService 同时也 bindService 启动的服务, 停止服务应同时使用stopService与unbindService。
+
+2、Service 与 Thread 的区别： 
+
+1). Thread：Thread 是程序执行的最小单元，它是分配CPU的基本单位。可以用 Thread 来执行一些异步的操作。
+
+2). Service：Service 是android的一种机制，当它运行的时候如果是Local Service，那么对应的 Service 是运行在主进程的 main 线程上的。如：onCreate，onStart 这些函数在被系统调用的时候都是在主进程的 main 线程上运行的。如果是Remote Service，那么对应的 Service 则是运行在独立进程的 main 线程上。因此请不要把 Service 理解成线程，它跟线程半毛钱的关系都没有！
+
+  
+
+既然这样，那么我们为什么要用 Service 呢？其实这跟 android 的系统机制有关，我们先拿 Thread 来说。Thread 的运行是独立于 Activity 的，也就是说当一个 Activity 被 finish 之后，如果你没有主动停止 Thread 或者 Thread 里的 run 方法没有执行完毕的话，Thread 也会一直执行。因此这里会出现一个问题：当 Activity 被 finish 之后，你不再持有该 Thread 的引用。另一方面，你没有办法在不同的 Activity 中对同一 Thread 进行控制。
+
+ 举个例子：如果你的 Thread 需要不停地隔一段时间就要连接服务器做某种同步的话，该 Thread 需要在 Activity 没有start的时候也在运行。这个时候当你 start 一个 Activity 就没有办法在该 Activity 里面控制之前创建的 Thread。因此你便需要创建并启动一个 Service ，在 Service 里面创建、运行并控制该 Thread，这样便解决了该问题（因为任何 Activity 都可以控制同一 Service，而系统也只会创建一个对应 Service 的实例）。
+
+因此你可以把 Service 想象成一种消息服务，而你可以在任何有 Context 的地方调用 Context.startService、Context.stopService、Context.bindService，Context.unbindService，来控制它，你也可以在 Service 里注册 BroadcastReceiver，在其他地方通过发送 broadcast 来控制它，当然这些都是 Thread 做不到的。
+
+3、Service的生命周期
+onCreate -> onStart -> onDestroy -> onBind 
+
+1). 被启动的服务的生命周期：如果一个Service被某个Activity 调用 Context.startService 方法启动，那么不管是否有Activity使用bindService绑定或unbindService解除绑定到该Service，该Service都在后台运行。
+
+如果一个Service被startService 方法多次启动，那么onCreate方法只会调用一次，onStart将会被调用多次（对应调用startService的次数），并且系统只会创建Service的一个实例（因此你应该知道只需要一次stopService调用）。该Service将会一直在后台运行，而不管对应程序的Activity是否在运行，直到被调用stopService，或自身的stopSelf方法。当然如果系统资源不足，android系统也可能结束服务。
+
+2). 被绑定的服务的生命周期：如果一个Service被某个Activity 调用 Context.bindService 方法绑定启动，不管调用 bindService 调用几次，onCreate方法都只会调用一次，同时onStart方法始终不会被调用。当连接建立之后，Service将会一直运行，除非调用Context.unbindService 断开连接或者之前调用bindService 的 Context 不存在了（如Activity被finish的时候），系统将会自动停止Service，对应onDestroy将被调用。
+
+3). 被启动又被绑定的服务的生命周期：如果一个Service又被启动又被绑定，则该Service将会一直在后台运行。并且不管如何调用，onCreate始终只会调用一次，对应startService调用多少次，Service的onStart便会调用多少次。调用unbindService将不会停止Service，而必须调用 stopService 或 Service的 stopSelf 来停止服务。
+
+4). 当服务被停止时清除服务：当一个Service被终止
+（
+1、调用stopService；
+2、调用stopSelf；
+3、不再有绑定的连接（没有被启动））时，onDestroy方法将会被调用，在这里你应当做一些清除工作，如停止在Service中创建并运行的线程。)
+
+特别注意：
+
+1、你应当知道在调用 bindService 绑定到Service的时候，你就应当保证在某处调用 unbindService 解除绑定（尽管 Activity 被 finish 的时候绑定会自　　　　　　动解除，并且Service会自动停止）；
+
+2、你应当注意 使用 startService 启动服务之后，一定要使用 stopService停止服务，不管你是否使用bindService； 
+
+3、同时使用 startService 与 bindService 要注意到，Service 的终止，需要unbindService与stopService同时调用，才能终止 Service，不管 startService 与 bindService 的调用顺序，如果先调用 unbindService 此时服务不会自动终止，再调用 stopService 之后服务才会停止，如果先调用 stopService 此时服务也不会终止，而再调用 unbindService 或者 之前调用 bindService 的 Context 不存在了（如Activity 被 finish 的时候）之后服务才会自动停止；
+
+4、当在旋转手机屏幕的时候，当手机屏幕在“横”“竖”变换时，此时如果你的 Activity 如果会自动旋转的话，旋转其实是 Activity 的重新创建，因此旋转之前的使用 bindService 建立的连接便会断开（Context 不存在了），对应服务的生命周期与上述相同。
+
+5、在 sdk 2.0 及其以后的版本中，对应的 onStart 已经被否决变为了 onStartCommand，不过之前的 onStart 任然有效。这意味着，如果你开发的应用程序用的 sdk 为 2.0 及其以后的版本，那么你应当使用 onStartCommand 而不是 onStart。
+
+后续bind例子...
+
+总结来源：
+http://www.cnblogs.com/newcj/archive/2011/05/30/2061370.html
+
+
