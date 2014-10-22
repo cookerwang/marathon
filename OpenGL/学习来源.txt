@@ -1,0 +1,3 @@
+本实例来源于：
+http://www.imobilebbs.com/wordpress/教程/android-opengl-es-开发教程
+此教程的篇幅对理解模型视图矩阵、投影矩阵、管线可以有比较好的初步认识。
